@@ -19,10 +19,11 @@
     .grid { display: grid; gap: 20px; }
     .grid-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
     .memo-card { border: 1px solid #ddd; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
-    .memo-card img { width: 100%; object-fit: cover; max-height: 240px; }
+    .memo-card img { width: 50%;aspect-ratio: 1 / 1; object-fit: contain;background-color: rgb(255, 255, 255); }
     .memo-body { padding: 16px; flex: 1; }
     .memo-meta { font-size: 0.9em; color: #555; margin-bottom: 8px; }
     .memo-actions button { margin-right: 8px; margin-top: 12px; }
+    .section-title { margin: 24px 0 12px; font-size: 20px; }
     .hidden { display: none !important; }
     .log-table, .log-table th, .log-table td { border: 1px solid #ccc; border-collapse: collapse; }
     .log-table th, .log-table td { padding: 8px; }
@@ -96,8 +97,11 @@
     </div>
 
     <div class="box" id="gallery-box">
-      <h2>作品交流區</h2>
-      <div id="memo-list" class="grid grid-2"></div>
+      <h2>作品區</h2>
+      <h3 class="section-title">自己的作品欄</h3>
+      <div id="own-memo-list" class="grid grid-2"></div>
+      <h3 class="section-title">作品交流區</h3>
+      <div id="public-memo-list" class="grid grid-2"></div>
     </div>
 
     <div class="box" id="logs-box">
@@ -243,32 +247,57 @@
       });
     }
 
+    function renderMemoCard(memo, allowActions) {
+      const card = document.createElement('div');
+      card.className = 'memo-card';
+      card.innerHTML = `
+        ${memo.thumbnail_path ? `<img src="${memo.thumbnail_path}" alt="作品縮圖" />` : ''}
+        <div class="memo-body">
+          <div class="memo-meta">作者：${memo.nickname} | 分類：${memo.category} | 上傳：${memo.created_at}</div>
+          <h3>${memo.title}</h3>
+          <p>${memo.content.replace(/\n/g, '<br/>')}</p>
+          <p><strong>靈感：</strong>${memo.inspiration.replace(/\n/g, '<br/>')}</p>
+          <div class="memo-actions">
+            ${allowActions ? `<button onclick="editMemo(${memo.id})">編輯</button><button class="secondary" onclick="deleteMemo(${memo.id})">刪除</button>` : ''}
+          </div>
+        </div>
+      `;
+      return card;
+    }
+
     function renderMemos() {
-      const memoList = document.getElementById('memo-list');
+      const ownMemoList = document.getElementById('own-memo-list');
+      const publicMemoList = document.getElementById('public-memo-list');
       const memos = loadStorage(STORAGE_MEMOS);
-      memoList.innerHTML = '';
+      const user = getSessionUser();
+      ownMemoList.innerHTML = '';
+      publicMemoList.innerHTML = '';
 
       if (!memos.length) {
-        memoList.innerHTML = '<p>目前尚無作品，登入後即可上傳。</p>';
+        ownMemoList.innerHTML = '<p>目前尚無自己的作品，登入後即可上傳。</p>';
+        publicMemoList.innerHTML = '<p>目前尚無其他人的作品。</p>';
         return;
       }
 
-      memos.forEach(memo => {
-        const card = document.createElement('div');
-        card.className = 'memo-card';
-        card.innerHTML = `
-          ${memo.thumbnail_path ? `<img src="${memo.thumbnail_path}" alt="作品縮圖" />` : ''}
-          <div class="memo-body">
-            <div class="memo-meta">作者：${memo.nickname} | 分類：${memo.category} | 上傳：${memo.created_at}</div>
-            <h3>${memo.title}</h3>
-            <p>${memo.content.replace(/\n/g, '<br/>')}</p>
-            <p><strong>靈感：</strong>${memo.inspiration.replace(/\n/g, '<br/>')}</p>
-            <div class="memo-actions">
-              ${getSessionUser() && getSessionUser().id === memo.user_id ? '<button onclick="editMemo(' + memo.id + ')">編輯</button><button class="secondary" onclick="deleteMemo(' + memo.id + ')">刪除</button>' : ''}
-            </div>
-          </div>
-        `;
-        memoList.appendChild(card);
+      const ownMemos = user ? memos.filter(memo => memo.user_id === user.id) : [];
+      const publicMemos = user ? memos.filter(memo => memo.user_id !== user.id) : memos;
+
+      if (!user) {
+        ownMemoList.innerHTML = '<p>登入後可查看自己的作品欄。</p>';
+      } else if (!ownMemos.length) {
+        ownMemoList.innerHTML = '<p>目前還沒有自己的作品。</p>';
+      }
+
+      if (!publicMemos.length) {
+        publicMemoList.innerHTML = '<p>目前尚無其他人的作品。</p>';
+      }
+
+      ownMemos.forEach(memo => {
+        ownMemoList.appendChild(renderMemoCard(memo, true));
+      });
+
+      publicMemos.forEach(memo => {
+        publicMemoList.appendChild(renderMemoCard(memo, false));
       });
     }
 
