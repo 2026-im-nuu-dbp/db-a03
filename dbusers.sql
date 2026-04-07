@@ -1,1 +1,11 @@
-// Create a new table called "dbusers"
+CREATE TABLE `dbusers` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `account` VARCHAR(80) NOT NULL UNIQUE,
+  `nickname` VARCHAR(80) NOT NULL,
+  `password` VARCHAR(255) NOT NULL,
+  `gender` ENUM('male', 'female', 'other') NOT NULL DEFAULT 'other',
+  `interests` VARCHAR(255) NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,0 +1,378 @@
+﻿<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>攝影作品分享</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; color: #333; margin: 0; padding: 0; }
+    header { background: #1d3557; color: white; padding: 16px 24px; }
+    header h1 { margin: 0; font-size: 24px; }
+    .container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+    .box { background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: 24px; padding: 20px; }
+    h2 { margin-top: 0; }
+    label { display: block; margin: 12px 0 4px; }
+    input[type=text], input[type=password], textarea, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+    textarea { min-height: 120px; resize: vertical; }
+    button { background: #457b9d; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; margin-top: 12px; }
+    button.secondary { background: #a8dadc; color: #1d3557; }
+    .grid { display: grid; gap: 20px; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .memo-card { border: 1px solid #ddd; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+    .memo-card img { width: 100%; object-fit: cover; max-height: 240px; }
+    .memo-body { padding: 16px; flex: 1; }
+    .memo-meta { font-size: 0.9em; color: #555; margin-bottom: 8px; }
+    .memo-actions button { margin-right: 8px; margin-top: 12px; }
+    .hidden { display: none !important; }
+    .log-table, .log-table th, .log-table td { border: 1px solid #ccc; border-collapse: collapse; }
+    .log-table th, .log-table td { padding: 8px; }
+    .status-success { color: green; }
+    .status-fail { color: red; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>攝影作品分享</h1>
+  </header>
+  <div class="container">
+    <div class="box" id="account-box">
+      <div id="register-section">
+        <h2>註冊帳號</h2>
+        <label>帳號</label>
+        <input type="text" id="register-account" placeholder="請輸入帳號" />
+        <label>暱稱</label>
+        <input type="text" id="register-nickname" placeholder="請輸入暱稱" />
+        <label>密碼</label>
+        <input type="password" id="register-password" placeholder="請輸入密碼" />
+        <label>性別</label>
+        <select id="register-gender">
+          <option value="male">男</option>
+          <option value="female">女</option>
+          <option value="other">其他</option>
+        </select>
+        <label>興趣</label>
+        <input type="text" id="register-interests" placeholder="攝影、旅遊、風景..." />
+        <button onclick="handleRegister()">註冊</button>
+      </div>
+
+      <div id="login-section" class="hidden">
+        <h2>登入</h2>
+        <label>帳號</label>
+        <input type="text" id="login-account" placeholder="請輸入帳號" />
+        <label>密碼</label>
+        <input type="password" id="login-password" placeholder="請輸入密碼" />
+        <button onclick="handleLogin()">登入</button>
+      </div>
+
+      <div id="user-panel" class="hidden">
+        <h2>歡迎回來，<span id="user-display"></span></h2>
+        <p>帳號：<span id="user-account"></span></p>
+        <p>性別：<span id="user-gender"></span></p>
+        <p>興趣：<span id="user-interests"></span></p>
+        <button onclick="handleLogout()">登出</button>
+      </div>
+    </div>
+
+    <div class="box hidden" id="memo-box">
+      <h2>上傳作品 / 圖文備忘</h2>
+      <label>標題</label>
+      <input type="text" id="memo-title" placeholder="作品標題" />
+      <label>分類</label>
+      <select id="memo-category">
+        <option value="風景">風景</option>
+        <option value="人物">人物</option>
+        <option value="動物">動物</option>
+        <option value="植物">植物</option>
+        <option value="其他">其他</option>
+      </select>
+      <label>內容</label>
+      <textarea id="memo-content" placeholder="分享攝影作品內容與靈感來源..."></textarea>
+      <label>靈感來源</label>
+      <textarea id="memo-inspiration" placeholder="輸入作品靈感來源或拍攝概念..."></textarea>
+      <label>上傳圖片</label>
+      <input type="file" id="memo-image" accept="image/*" />
+      <button onclick="handleSaveMemo()">儲存作品</button>
+      <button class="secondary" onclick="resetMemoForm()">清除</button>
+    </div>
+
+    <div class="box" id="gallery-box">
+      <h2>作品交流區</h2>
+      <div id="memo-list" class="grid grid-2"></div>
+    </div>
+
+    <div class="box" id="logs-box">
+      <h2>登入紀錄</h2>
+      <table class="log-table" style="width:100%;">
+        <thead>
+          <tr>
+            <th>帳號</th>
+            <th>日期時間</th>
+            <th>是否成功</th>
+            <th>事件</th>
+          </tr>
+        </thead>
+        <tbody id="log-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_USERS = 'dbusers';
+    const STORAGE_LOGS = 'dblog';
+    const STORAGE_MEMOS = 'dbmemo';
+    const STORAGE_SESSION = 'sessionUser';
+    let editMemoId = null;
+
+    function loadStorage(key) {
+      return JSON.parse(localStorage.getItem(key) || '[]');
+    }
+
+    function saveStorage(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function appendLog(account, event, success, notes) {
+      const logs = loadStorage(STORAGE_LOGS);
+      logs.unshift({ account, event, success: success ? 1 : 0, notes: notes || '', occurred_at: new Date().toLocaleString() });
+      saveStorage(STORAGE_LOGS, logs.slice(0, 100));
+      renderLogs();
+    }
+
+    function handleRegister() {
+      const account = document.getElementById('register-account').value.trim();
+      const nickname = document.getElementById('register-nickname').value.trim();
+      const password = document.getElementById('register-password').value;
+      const gender = document.getElementById('register-gender').value;
+      const interests = document.getElementById('register-interests').value.trim();
+
+      if (!account || !nickname || !password) {
+        return alert('請完整填寫帳號、暱稱與密碼。');
+      }
+
+      const users = loadStorage(STORAGE_USERS);
+      if (users.some(user => user.account === account)) {
+        return alert('此帳號已存在，請換一個帳號。');
+      }
+
+      users.push({ id: Date.now(), account, nickname, password, gender, interests, created_at: new Date().toLocaleString() });
+      saveStorage(STORAGE_USERS, users);
+      alert('註冊完成，請登入。');
+      document.getElementById('register-account').value = '';
+      document.getElementById('register-nickname').value = '';
+      document.getElementById('register-password').value = '';
+      document.getElementById('register-interests').value = '';
+      document.getElementById('register-section').classList.add('hidden');
+      document.getElementById('login-section').classList.remove('hidden');
+      appendLog(account, 'register', true, '成功註冊');
+    }
+
+    function handleLogin() {
+      const account = document.getElementById('login-account').value.trim();
+      const password = document.getElementById('login-password').value;
+      const users = loadStorage(STORAGE_USERS);
+      const user = users.find(item => item.account === account && item.password === password);
+
+      if (!user) {
+        appendLog(account || '未知', 'login', false, '帳號或密碼錯誤');
+        return alert('帳號或密碼錯誤，請重新輸入。');
+      }
+
+      localStorage.setItem(STORAGE_SESSION, JSON.stringify(user));
+      document.getElementById('login-account').value = '';
+      document.getElementById('login-password').value = '';
+      appendLog(account, 'login', true, '登入成功');
+      renderPage();
+    }
+
+    function handleLogout() {
+      const user = getSessionUser();
+      if (user) {
+        appendLog(user.account, 'logout', true, '登出');
+      }
+      localStorage.removeItem(STORAGE_SESSION);
+      editMemoId = null;
+      renderPage();
+    }
+
+    function getSessionUser() {
+      const current = localStorage.getItem(STORAGE_SESSION);
+      return current ? JSON.parse(current) : null;
+    }
+
+    function renderPage() {
+      const user = getSessionUser();
+      const registerSec = document.getElementById('register-section');
+      const loginSec = document.getElementById('login-section');
+      const userPanel = document.getElementById('user-panel');
+      const memoBox = document.getElementById('memo-box');
+      const accountBox = document.getElementById('account-box');
+
+      if (user) {
+        registerSec.classList.add('hidden');
+        loginSec.classList.add('hidden');
+        userPanel.classList.remove('hidden');
+        memoBox.classList.remove('hidden');
+        document.getElementById('user-display').textContent = user.nickname;
+        document.getElementById('user-account').textContent = user.account;
+        document.getElementById('user-gender').textContent = user.gender;
+        document.getElementById('user-interests').textContent = user.interests;
+      } else {
+        registerSec.classList.remove('hidden');
+        loginSec.classList.remove('hidden');
+        userPanel.classList.add('hidden');
+        memoBox.classList.add('hidden');
+      }
+
+      renderMemos();
+      renderLogs();
+    }
+
+    function renderLogs() {
+      const logs = loadStorage(STORAGE_LOGS);
+      const body = document.getElementById('log-body');
+      body.innerHTML = '';
+      logs.forEach(log => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${log.account}</td>
+          <td>${log.occurred_at}</td>
+          <td class="${log.success ? 'status-success' : 'status-fail'}">${log.success ? '成功' : '失敗'}</td>
+          <td>${log.event}${log.notes ? ' - ' + log.notes : ''}</td>
+        `;
+        body.appendChild(row);
+      });
+    }
+
+    function renderMemos() {
+      const memoList = document.getElementById('memo-list');
+      const memos = loadStorage(STORAGE_MEMOS);
+      memoList.innerHTML = '';
+
+      if (!memos.length) {
+        memoList.innerHTML = '<p>目前尚無作品，登入後即可上傳。</p>';
+        return;
+      }
+
+      memos.forEach(memo => {
+        const card = document.createElement('div');
+        card.className = 'memo-card';
+        card.innerHTML = `
+          ${memo.thumbnail_path ? `<img src="${memo.thumbnail_path}" alt="作品縮圖" />` : ''}
+          <div class="memo-body">
+            <div class="memo-meta">作者：${memo.nickname} | 分類：${memo.category} | 上傳：${memo.created_at}</div>
+            <h3>${memo.title}</h3>
+            <p>${memo.content.replace(/\n/g, '<br/>')}</p>
+            <p><strong>靈感：</strong>${memo.inspiration.replace(/\n/g, '<br/>')}</p>
+            <div class="memo-actions">
+              ${getSessionUser() && getSessionUser().id === memo.user_id ? '<button onclick="editMemo(' + memo.id + ')">編輯</button><button class="secondary" onclick="deleteMemo(' + memo.id + ')">刪除</button>' : ''}
+            </div>
+          </div>
+        `;
+        memoList.appendChild(card);
+      });
+    }
+
+    function handleSaveMemo() {
+      const user = getSessionUser();
+      if (!user) {
+        return alert('請先登入，再進行作品上傳。');
+      }
+
+      const title = document.getElementById('memo-title').value.trim();
+      const category = document.getElementById('memo-category').value;
+      const content = document.getElementById('memo-content').value.trim();
+      const inspiration = document.getElementById('memo-inspiration').value.trim();
+      const imageFile = document.getElementById('memo-image').files[0];
+
+      if (!title || !content) {
+        return alert('標題與內容為必填項目。');
+      }
+
+      const memos = loadStorage(STORAGE_MEMOS);
+      const now = new Date().toLocaleString();
+
+      const saveMemo = (imagePath, thumbPath) => {
+        if (editMemoId) {
+          const index = memos.findIndex(item => item.id === editMemoId);
+          if (index !== -1) {
+            memos[index] = { ...memos[index], title, category, content, inspiration, image_path: imagePath || memos[index].image_path, thumbnail_path: thumbPath || memos[index].thumbnail_path, updated_at: now };
+            saveStorage(STORAGE_MEMOS, memos);
+            alert('作品已更新。');
+          }
+        } else {
+          memos.unshift({ id: Date.now(), user_id: user.id, nickname: user.nickname, title, category, content, inspiration, image_path: imagePath, thumbnail_path: thumbPath, created_at: now, updated_at: now });
+          saveStorage(STORAGE_MEMOS, memos);
+          alert('作品已新增。');
+        }
+        resetMemoForm();
+        renderMemos();
+      };
+
+      if (imageFile) {
+        const reader = new FileReader();
+        reader.onload = event => {
+          const imageDataUrl = event.target.result;
+          createThumbnail(imageDataUrl, 480, 320, thumbUrl => saveMemo(imageDataUrl, thumbUrl));
+        };
+        reader.readAsDataURL(imageFile);
+      } else {
+        saveMemo(null, null);
+      }
+    }
+
+    function createThumbnail(dataUrl, width, height, callback) {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const aspectRatio = img.width / img.height;
+        if (img.width > img.height) {
+          canvas.width = width;
+          canvas.height = Math.round(width / aspectRatio);
+        } else {
+          canvas.height = height;
+          canvas.width = Math.round(height * aspectRatio);
+        }
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        callback(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.src = dataUrl;
+    }
+
+    function resetMemoForm() {
+      editMemoId = null;
+      document.getElementById('memo-title').value = '';
+      document.getElementById('memo-category').value = '風景';
+      document.getElementById('memo-content').value = '';
+      document.getElementById('memo-inspiration').value = '';
+      document.getElementById('memo-image').value = '';
+    }
+
+    function editMemo(id) {
+      const memos = loadStorage(STORAGE_MEMOS);
+      const memo = memos.find(item => item.id === id);
+      const user = getSessionUser();
+      if (!memo || !user || user.id !== memo.user_id) {
+        return alert('您無權編輯此作品。');
+      }
+      editMemoId = id;
+      document.getElementById('memo-title').value = memo.title;
+      document.getElementById('memo-category').value = memo.category;
+      document.getElementById('memo-content').value = memo.content;
+      document.getElementById('memo-inspiration').value = memo.inspiration;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function deleteMemo(id) {
+      if (!confirm('確認要刪除此作品嗎？')) return;
+      const memos = loadStorage(STORAGE_MEMOS).filter(item => item.id !== id);
+      saveStorage(STORAGE_MEMOS, memos);
+      renderMemos();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderPage();
+    });
+  </script>
+</body>
+</html>
