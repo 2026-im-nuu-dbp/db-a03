@@ -32,11 +32,14 @@
   </style>
 </head>
 <body>
+  <!-- 頁首：顯示網站主題名稱 -->
   <header>
     <h1>攝影作品分享</h1>
   </header>
   <div class="container">
+    <!-- 帳號區塊：包含註冊、登入、登入後使用者資訊三種畫面 -->
     <div class="box" id="account-box">
+      <!-- 註冊區：新使用者建立帳號 -->
       <div id="register-section">
         <h2>註冊帳號</h2>
         <label>帳號</label>
@@ -56,6 +59,7 @@
         <button onclick="handleRegister()">註冊</button>
       </div>
 
+      <!-- 登入區：註冊後或既有使用者登入 -->
       <div id="login-section" class="hidden">
         <h2>登入</h2>
         <label>帳號</label>
@@ -65,6 +69,7 @@
         <button onclick="handleLogin()">登入</button>
       </div>
 
+      <!-- 使用者面板：登入後顯示個人資訊與登出按鈕 -->
       <div id="user-panel" class="hidden">
         <h2>歡迎回來，<span id="user-display"></span></h2>
         <p>帳號：<span id="user-account"></span></p>
@@ -74,6 +79,7 @@
       </div>
     </div>
 
+    <!-- 作品編輯區：僅登入後顯示，可新增或編輯作品 -->
     <div class="box hidden" id="memo-box">
       <h2>上傳作品 / 圖文備忘</h2>
       <label>標題</label>
@@ -96,6 +102,7 @@
       <button class="secondary" onclick="resetMemoForm()">清除</button>
     </div>
 
+    <!-- 作品展示區：分為自己的作品欄與公開交流區 -->
     <div class="box" id="gallery-box">
       <h2>作品區</h2>
       <h3 class="section-title">自己的作品欄</h3>
@@ -104,6 +111,7 @@
       <div id="public-memo-list" class="grid grid-2"></div>
     </div>
 
+    <!-- 紀錄區：列出註冊、登入、登出等操作結果 -->
     <div class="box" id="logs-box">
       <h2>登入紀錄</h2>
       <table class="log-table" style="width:100%;">
@@ -121,20 +129,26 @@
   </div>
 
   <script>
+    // localStorage 的鍵名集中管理，避免字串散落各處難以維護
     const STORAGE_USERS = 'dbusers';
     const STORAGE_LOGS = 'dblog';
     const STORAGE_MEMOS = 'dbmemo';
     const STORAGE_SESSION = 'sessionUser';
+
+    // 目前正在編輯的作品 id；null 代表目前是新增模式
     let editMemoId = null;
 
+    // 從 localStorage 讀取陣列資料；若尚無資料則回傳空陣列
     function loadStorage(key) {
       return JSON.parse(localStorage.getItem(key) || '[]');
     }
 
+    // 將資料統一序列化後寫回 localStorage
     function saveStorage(key, value) {
       localStorage.setItem(key, JSON.stringify(value));
     }
 
+    // 新增一筆操作紀錄，並限制最多保留 100 筆避免無限成長
     function appendLog(account, event, success, notes) {
       const logs = loadStorage(STORAGE_LOGS);
       logs.unshift({ account, event, success: success ? 1 : 0, notes: notes || '', occurred_at: new Date().toLocaleString() });
@@ -142,6 +156,7 @@
       renderLogs();
     }
 
+    // 處理註冊流程：驗證欄位、檢查重複帳號、建立使用者、切換到登入畫面
     function handleRegister() {
       const account = document.getElementById('register-account').value.trim();
       const nickname = document.getElementById('register-nickname').value.trim();
@@ -149,38 +164,48 @@
       const gender = document.getElementById('register-gender').value;
       const interests = document.getElementById('register-interests').value.trim();
 
+      // 基本必填檢查
       if (!account || !nickname || !password) {
         return alert('請完整填寫帳號、暱稱與密碼。');
       }
 
       const users = loadStorage(STORAGE_USERS);
+      // 帳號唯一性檢查
       if (users.some(user => user.account === account)) {
         return alert('此帳號已存在，請換一個帳號。');
       }
 
+      // 寫入新使用者資料
       users.push({ id: Date.now(), account, nickname, password, gender, interests, created_at: new Date().toLocaleString() });
       saveStorage(STORAGE_USERS, users);
       alert('註冊完成，請登入。');
+
+      // 清空註冊欄位，避免殘留資料
       document.getElementById('register-account').value = '';
       document.getElementById('register-nickname').value = '';
       document.getElementById('register-password').value = '';
       document.getElementById('register-interests').value = '';
+
+      // 完成註冊後，預設切到登入區
       document.getElementById('register-section').classList.add('hidden');
       document.getElementById('login-section').classList.remove('hidden');
       appendLog(account, 'register', true, '成功註冊');
     }
 
+    // 處理登入流程：比對帳密成功後建立 session，失敗則記錄失敗事件
     function handleLogin() {
       const account = document.getElementById('login-account').value.trim();
       const password = document.getElementById('login-password').value;
       const users = loadStorage(STORAGE_USERS);
       const user = users.find(item => item.account === account && item.password === password);
 
+      // 找不到符合帳密的使用者
       if (!user) {
         appendLog(account || '未知', 'login', false, '帳號或密碼錯誤');
         return alert('帳號或密碼錯誤，請重新輸入。');
       }
 
+      // 儲存目前登入者資訊，並刷新頁面狀態
       localStorage.setItem(STORAGE_SESSION, JSON.stringify(user));
       document.getElementById('login-account').value = '';
       document.getElementById('login-password').value = '';
@@ -188,6 +213,7 @@
       renderPage();
     }
 
+    // 登出：清除 session、離開編輯模式、重繪畫面
     function handleLogout() {
       const user = getSessionUser();
       if (user) {
@@ -198,11 +224,13 @@
       renderPage();
     }
 
+    // 取得目前登入使用者；若無登入回傳 null
     function getSessionUser() {
       const current = localStorage.getItem(STORAGE_SESSION);
       return current ? JSON.parse(current) : null;
     }
 
+    // 依登入狀態切換可見區塊，並同步刷新作品與紀錄清單
     function renderPage() {
       const user = getSessionUser();
       const registerSec = document.getElementById('register-section');
@@ -231,6 +259,7 @@
       renderLogs();
     }
 
+    // 將登入/操作紀錄渲染成表格內容
     function renderLogs() {
       const logs = loadStorage(STORAGE_LOGS);
       const body = document.getElementById('log-body');
@@ -247,6 +276,7 @@
       });
     }
 
+    // 建立單張作品卡片；allowActions 決定是否顯示編輯/刪除按鈕
     function renderMemoCard(memo, allowActions) {
       const card = document.createElement('div');
       card.className = 'memo-card';
@@ -265,6 +295,7 @@
       return card;
     }
 
+    // 依登入者分流顯示「自己的作品」與「交流作品」
     function renderMemos() {
       const ownMemoList = document.getElementById('own-memo-list');
       const publicMemoList = document.getElementById('public-memo-list');
@@ -301,6 +332,7 @@
       });
     }
 
+    // 新增/更新作品：支援可選圖片上傳並自動產生縮圖
     function handleSaveMemo() {
       const user = getSessionUser();
       if (!user) {
@@ -320,15 +352,18 @@
       const memos = loadStorage(STORAGE_MEMOS);
       const now = new Date().toLocaleString();
 
+      // 統一實際寫入流程：同時覆蓋新增與編輯兩種情境
       const saveMemo = (imagePath, thumbPath) => {
         if (editMemoId) {
           const index = memos.findIndex(item => item.id === editMemoId);
           if (index !== -1) {
+            // 編輯模式：保留原圖資料（若此次未重新上傳圖片）
             memos[index] = { ...memos[index], title, category, content, inspiration, image_path: imagePath || memos[index].image_path, thumbnail_path: thumbPath || memos[index].thumbnail_path, updated_at: now };
             saveStorage(STORAGE_MEMOS, memos);
             alert('作品已更新。');
           }
         } else {
+          // 新增模式：新作品插入最前面，讓最新內容優先顯示
           memos.unshift({ id: Date.now(), user_id: user.id, nickname: user.nickname, title, category, content, inspiration, image_path: imagePath, thumbnail_path: thumbPath, created_at: now, updated_at: now });
           saveStorage(STORAGE_MEMOS, memos);
           alert('作品已新增。');
@@ -337,6 +372,7 @@
         renderMemos();
       };
 
+      // 有圖片時先讀檔，再產生縮圖，最後才存資料
       if (imageFile) {
         const reader = new FileReader();
         reader.onload = event => {
@@ -345,10 +381,12 @@
         };
         reader.readAsDataURL(imageFile);
       } else {
+        // 沒有上傳圖片時，直接儲存文字內容
         saveMemo(null, null);
       }
     }
 
+    // 使用 canvas 產生縮圖：維持原圖比例，避免拉伸變形
     function createThumbnail(dataUrl, width, height, callback) {
       const img = new Image();
       img.onload = () => {
@@ -368,6 +406,7 @@
       img.src = dataUrl;
     }
 
+    // 重設作品表單並退出編輯模式
     function resetMemoForm() {
       editMemoId = null;
       document.getElementById('memo-title').value = '';
@@ -377,6 +416,7 @@
       document.getElementById('memo-image').value = '';
     }
 
+    // 載入既有作品到表單：僅作者本人可編輯
     function editMemo(id) {
       const memos = loadStorage(STORAGE_MEMOS);
       const memo = memos.find(item => item.id === id);
@@ -392,6 +432,7 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    // 刪除作品前先進行二次確認，避免誤刪
     function deleteMemo(id) {
       if (!confirm('確認要刪除此作品嗎？')) return;
       const memos = loadStorage(STORAGE_MEMOS).filter(item => item.id !== id);
@@ -399,6 +440,7 @@
       renderMemos();
     }
 
+    // DOM 載入完成後，依目前登入狀態初始化整個頁面
     document.addEventListener('DOMContentLoaded', () => {
       renderPage();
     });
