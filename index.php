@@ -28,8 +28,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$account || !$nickname || !$password) {
             $error = '帳號、暱稱與密碼為必填。';
-        } elseif (strlen($password) < 6) {
-            $error = '密碼至少 6 個字元。';
         } elseif ($password !== $password_confirm) {
             $error = '兩次密碼不一致。';
         } elseif (!preg_match('/^[a-zA-Z0-9_]{3,20}$/', $account)) {
@@ -236,21 +234,30 @@ $myMemos = [];
 $publicMemos = [];
 if ($user) {
     $stmt = $conn->prepare('SELECT id, title, category, content, inspiration, thumbnail_path, created_at FROM dbmemo WHERE user_id = ? ORDER BY created_at DESC');
+if ($stmt) {
     $stmt->bind_param('i', $user['id']);
     $stmt->execute();
     $res = $stmt->get_result();
     while ($r = $res->fetch_assoc()) {
-        $myMemos[] = $r;
+    $myMemos[] = $r;
     }
     $stmt->close();
+} else {
+    $error = '載入個人作品失敗：' . $conn->error;
+    }
 }
 $stmt = $conn->prepare('SELECT m.id, m.title, m.category, m.content, m.inspiration, m.thumbnail_path, m.created_at, u.nickname FROM dbmemo m JOIN dbusers u ON u.id = m.user_id WHERE m.is_public = 1 ORDER BY m.created_at DESC');
+$publicMemos = [];
+if ($stmt) {
 $stmt->execute();
 $res = $stmt->get_result();
 while ($r = $res->fetch_assoc()) {
     $publicMemos[] = $r;
+  }
+  $stmt->close();
+} else {
+  $error = ($error ? $error . '；' : '') . '載入公開作品失敗：' . $conn->error;
 }
-$stmt->close();
 
 $editMemo = null;
 if ($page === 'edit' && $user) {
@@ -438,29 +445,29 @@ if ($page === 'edit' && $user) {
           <a class="btn" href="index.php?page=register">註冊</a>
           <a class="btn secondary" href="index.php?page=login">登入</a>
         </div>
-      <?php endif; ?>
+    <?php endif; ?>
 
-      <div class="box">
+    <div class="box">
         <h2>作品交流區</h2>
         <?php if (!$publicMemos): ?>
-          <p>目前尚無作品。</p>
+        <p>目前尚無作品。</p>
         <?php else: ?>
-          <div class="grid">
+        <div class="grid">
             <?php foreach ($publicMemos as $m): ?>
-              <div class="card">
+            <div class="card">
                 <?php if ($m['thumbnail_path']): ?><img src="<?php echo h($m['thumbnail_path']); ?>" alt="縮圖" /><?php endif; ?>
                 <div class="card-body">
-                  <div class="meta">作者：<?php echo h($m['nickname']); ?> | <?php echo h($m['created_at']); ?> | <?php echo h($m['category']); ?></div>
-                  <h3><?php echo h($m['title']); ?></h3>
-                  <p><?php echo nl2br(h($m['content'])); ?></p>
-                  <p><strong>靈感：</strong><?php echo nl2br(h($m['inspiration'])); ?></p>
+                <div class="meta">作者：<?php echo h($m['nickname']); ?> | <?php echo h($m['created_at']); ?> | <?php echo h($m['category']); ?></div>
+                <h3><?php echo h($m['title']); ?></h3>
+                <p><?php echo nl2br(h($m['content'])); ?></p>
+                <p><strong>靈感：</strong><?php echo nl2br(h($m['inspiration'])); ?></p>
                 </div>
-              </div>
+            </div>
             <?php endforeach; ?>
-          </div>
+        </div>
         <?php endif; ?>
-      </div>
+    </div>
     <?php endif; ?>
-  </div>
+</div>
 </body>
 </html>
