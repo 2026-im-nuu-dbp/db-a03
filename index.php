@@ -247,25 +247,22 @@ if ($stmt) {
     $error = '載入個人作品失敗：' . $conn->error;
     }
 }
-if ($user) {
-    $stmt = $conn->prepare("
-        SELECT event, success, ip_address, notes, created_at 
-        FROM dblog 
-        WHERE user_id = ? 
-        ORDER BY created_at DESC
-    ");
-    if ($stmt) {
-        $stmt->bind_param('i', $user['id']);
-        $stmt->execute();
-        $res = $stmt->get_result();
-
-        while ($row = $res->fetch_assoc()) {
-            $logs[] = $row;
-        }
-
-        $stmt->close();
+if ($user) { 
+    $stmt = $conn->prepare(" 
+SELECT event, success, ip_address, notes, occurred_at 
+    FROM dblog WHERE account = ? 
+ORDER BY occurred_at DESC 
+    "); 
+    if ($stmt) { 
+        $stmt->bind_param('s', $user['account']); 
+        $stmt->execute(); 
+        $res = $stmt->get_result(); 
+        while ($row = $res->fetch_assoc()) { 
+            $logs[] = $row; 
+        } 
+        $stmt->close(); 
+        } 
     }
-}
 $stmt = $conn->prepare('SELECT m.id, m.title, m.category, m.content, m.inspiration, m.thumbnail_path, m.created_at, u.nickname FROM dbmemo m JOIN dbusers u ON u.id = m.user_id WHERE m.is_public = 1 ORDER BY m.created_at DESC');
 $publicMemos = [];
 if ($stmt) {
@@ -273,10 +270,10 @@ $stmt->execute();
 $res = $stmt->get_result();
 while ($r = $res->fetch_assoc()) {
     $publicMemos[] = $r;
-  }
-  $stmt->close();
+}
+$stmt->close();
 } else {
-  $error = ($error ? $error . '；' : '') . '載入公開作品失敗：' . $conn->error;
+$error = ($error ? $error . '；' : '') . '載入公開作品失敗：' . $conn->error;
 }
 
 $editMemo = null;
@@ -296,10 +293,10 @@ if ($page === 'edit' && $user) {
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>攝影作品分享</title>
-  <style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>攝影作品分享</title>
+<style>
     body { font-family: Arial, sans-serif; background: #f4f4f4; color: #2d3d50; margin: 0; }
     header { background: #4f5f76; color: #fff; padding: 16px; }
     .nav a { color: #fff; margin-right: 12px; text-decoration: none; }
@@ -319,180 +316,149 @@ if ($page === 'edit' && $user) {
     .alert { padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
     .alert.error { background: #ffdfe2; color: #7b1f28; }
     .alert.success { background: #dff4df; color: #1b5e1b; }
-  </style>
+</style>
 </head>
 <body>
-  <header>
+<header>
     <h1>攝影作品分享</h1>
     <div class="nav">
-      <a href="index.php">首頁</a>
-      <?php if ($user): ?>
+    <a href="index.php">首頁</a>
+    <?php if ($user): ?>
         <a href="index.php?page=upload">上傳作品</a>
         <a href="index.php?action=logout">登出</a>
-      <?php else: ?>
+    <?php else: ?>
         <a href="index.php?page=register">註冊</a>
         <a href="index.php?page=login">登入</a>
-      <?php endif; ?>
+    <?php endif; ?>
     </div>
-  </header>
+</header>
 
-  <div class="container">
+<div class="container">
     <?php if ($error): ?><div class="alert error"><?php echo h($error); ?></div><?php endif; ?>
     <?php if ($success): ?><div class="alert success"><?php echo h($success); ?></div><?php endif; ?>
 
     <?php if ($page === 'register' && !$user): ?>
-      <div class="box">
+    <div class="box">
         <h2>註冊帳號</h2>
         <form method="POST" action="index.php?page=register">
           <label>帳號 *</label>
-          <input type="text" name="account" required value="<?php echo h($_POST['account'] ?? ''); ?>" />
+        <input type="text" name="account" required value="<?php echo h($_POST['account'] ?? ''); ?>" />
           <label>暱稱 *</label>
-          <input type="text" name="nickname" required value="<?php echo h($_POST['nickname'] ?? ''); ?>" />
+        <input type="text" name="nickname" required value="<?php echo h($_POST['nickname'] ?? ''); ?>" />
           <label>密碼 *</label>
-          <input type="password" name="password" required />
+        <input type="password" name="password" required />
           <label>確認密碼 *</label>
-          <input type="password" name="password_confirm" required />
-          <label>性別</label>
-          <select name="gender">
+        <input type="password" name="password_confirm" required />
+        <label>性別</label>
+        <select name="gender">
             <option value="other">其他</option>
             <option value="male">男</option>
             <option value="female">女</option>
-          </select>
-          <label>興趣</label>
-          <input type="text" name="interests" value="<?php echo h($_POST['interests'] ?? ''); ?>" />
-          <button type="submit">註冊</button>
-          <a class="btn secondary" href="index.php?page=login">改去登入</a>
+        </select>
+        <label>興趣</label>
+        <input type="text" name="interests" value="<?php echo h($_POST['interests'] ?? ''); ?>" />
+        <button type="submit">註冊</button>
+        <a class="btn secondary" href="index.php?page=login">改去登入</a>
         </form>
-      </div>
+    </div>
 
     <?php elseif ($page === 'login' && !$user): ?>
-      <div class="box">
+    <div class="box">
         <h2>登入</h2>
         <form method="POST" action="index.php?page=login">
           <label>帳號 *</label>
-          <input type="text" name="account" required value="<?php echo h($_POST['account'] ?? ''); ?>" />
+        <input type="text" name="account" required value="<?php echo h($_POST['account'] ?? ''); ?>" />
           <label>密碼 *</label>
-          <input type="password" name="password" required />
-          <button type="submit">登入</button>
-          <a class="btn secondary" href="index.php?page=register">改去註冊</a>
+        <input type="password" name="password" required />
+        <button type="submit">登入</button>
+        <a class="btn secondary" href="index.php?page=register">改去註冊</a>
         </form>
-      </div>
-
+    </div>
     <?php elseif ($page === 'upload' && $user): ?>
-      <div class="box">
+    <div class="box">
         <h2>上傳作品</h2>
         <form method="POST" action="index.php?page=upload" enctype="multipart/form-data">
           <label>標題 *</label>
-          <input type="text" name="title" required value="<?php echo h($_POST['title'] ?? ''); ?>" />
+        <input type="text" name="title" required value="<?php echo h($_POST['title'] ?? ''); ?>" />
           <label>分類 *</label>
-          <select name="category" required>
+        <select name="category" required>
             <option value="風景">風景</option><option value="人物">人物</option><option value="動物">動物</option><option value="植物">植物</option><option value="其他">其他</option>
-          </select>
+        </select>
           <label>內容 *</label>
-          <textarea name="content" required><?php echo h($_POST['content'] ?? ''); ?></textarea>
-          <label>靈感</label>
-          <textarea name="inspiration"><?php echo h($_POST['inspiration'] ?? ''); ?></textarea>
-          <label>圖片</label>
-          <input type="file" name="image" accept="image/*" />
-          <button type="submit">送出</button>
-          <a class="btn secondary" href="index.php">返回首頁</a>
+        <textarea name="content" required><?php echo h($_POST['content'] ?? ''); ?></textarea>
+        <label>靈感</label>
+        <textarea name="inspiration"><?php echo h($_POST['inspiration'] ?? ''); ?></textarea>
+        <label>圖片</label>
+        <input type="file" name="image" accept="image/*" />
+        <button type="submit">送出</button>
+        <a class="btn secondary" href="index.php">返回首頁</a>
         </form>
-      </div>
-
+    </div>
     <?php elseif ($page === 'edit' && $user && $editMemo): ?>
-      <div class="box">
+    <div class="box">
         <h2>編輯作品</h2>
         <form method="POST" action="index.php?page=edit&id=<?php echo (int)$editMemo['id']; ?>" enctype="multipart/form-data">
           <label>標題 *</label>
-          <input type="text" name="title" required value="<?php echo h($_POST['title'] ?? $editMemo['title']); ?>" />
+        <input type="text" name="title" required value="<?php echo h($_POST['title'] ?? $editMemo['title']); ?>" />
           <label>分類 *</label>
-          <select name="category" required>
+        <select name="category" required>
             <?php $selectedCat = $_POST['category'] ?? $editMemo['category']; ?>
             <option value="風景" <?php echo $selectedCat === '風景' ? 'selected' : ''; ?>>風景</option>
             <option value="人物" <?php echo $selectedCat === '人物' ? 'selected' : ''; ?>>人物</option>
             <option value="動物" <?php echo $selectedCat === '動物' ? 'selected' : ''; ?>>動物</option>
             <option value="植物" <?php echo $selectedCat === '植物' ? 'selected' : ''; ?>>植物</option>
             <option value="其他" <?php echo $selectedCat === '其他' ? 'selected' : ''; ?>>其他</option>
-          </select>
+        </select>
           <label>內容 *</label>
-          <textarea name="content" required><?php echo h($_POST['content'] ?? $editMemo['content']); ?></textarea>
-          <label>靈感</label>
-          <textarea name="inspiration"><?php echo h($_POST['inspiration'] ?? $editMemo['inspiration']); ?></textarea>
-          <?php if (!empty($editMemo['thumbnail_path'])): ?>
+        <textarea name="content" required><?php echo h($_POST['content'] ?? $editMemo['content']); ?></textarea>
+        <label>靈感</label>
+        <textarea name="inspiration"><?php echo h($_POST['inspiration'] ?? $editMemo['inspiration']); ?></textarea>
+        <?php if (!empty($editMemo['thumbnail_path'])): ?>
             <img src="<?php echo h($editMemo['thumbnail_path']); ?>" alt="現有圖片" style="max-width:260px; border-radius:8px; margin-top:8px;" />
-          <?php endif; ?>
-          <label>更換圖片</label>
-          <input type="file" name="image" accept="image/*" />
-          <button type="submit">儲存</button>
-          <a class="btn secondary" href="index.php">返回首頁</a>
+        <?php endif; ?>
+        <label>更換圖片</label>
+        <input type="file" name="image" accept="image/*" />
+        <button type="submit">儲存</button>
+        <a class="btn secondary" href="index.php">返回首頁</a>
         </form>
-      </div>
+    </div>
 
     <?php else: ?>
-      <?php if ($user): ?>
+    <?php if ($user): ?>
         <div class="box">
-          <h2>歡迎，<?php echo h($user['nickname']); ?></h2>
-          <p>帳號：<?php echo h($user['account']); ?> | 性別：<?php echo h($user['gender']); ?> | 興趣：<?php echo h($user['interests']); ?></p>
-          <a class="btn" href="index.php?page=upload">新增作品</a>
+        <h2>歡迎，<?php echo h($user['nickname']); ?></h2>
+        <p>帳號：<?php echo h($user['account']); ?> | 性別：<?php echo h($user['gender']); ?> | 興趣：<?php echo h($user['interests']); ?></p>
+        <a class="btn" href="index.php?page=upload">新增作品</a>
         </div>
 
         <div class="box">
-          <h2>我的作品</h2>
-          <?php if (!$myMemos): ?>
+        <h2>我的作品</h2>
+        <?php if (!$myMemos): ?>
             <p>尚無作品。</p>
-          <?php else: ?>
+        <?php else: ?>
             <div class="grid">
-              <?php foreach ($myMemos as $m): ?>
+            <?php foreach ($myMemos as $m): ?>
                 <div class="card">
-                  <?php if ($m['thumbnail_path']): ?><img src="<?php echo h($m['thumbnail_path']); ?>" alt="縮圖" /><?php endif; ?>
-                  <div class="card-body">
+                <?php if ($m['thumbnail_path']): ?><img src="<?php echo h($m['thumbnail_path']); ?>" alt="縮圖" /><?php endif; ?>
+                <div class="card-body">
                     <div class="meta"><?php echo h($m['created_at']); ?> | <?php echo h($m['category']); ?></div>
                     <h3><?php echo h($m['title']); ?></h3>
                     <p><?php echo nl2br(h($m['content'])); ?></p>
                     <p><strong>靈感：</strong><?php echo nl2br(h($m['inspiration'])); ?></p>
                     <a class="btn" href="index.php?page=edit&id=<?php echo (int)$m['id']; ?>">編輯</a>
                     <a class="btn danger" href="index.php?page=delete&id=<?php echo (int)$m['id']; ?>" onclick="return confirm('確認刪除？')">刪除</a>
-                  </div>
                 </div>
-              <?php endforeach; ?>
+                </div>
+            <?php endforeach; ?>
             </div>
-          <?php endif; ?>
+        <?php endif; ?>
         </div>
+    <?php else: ?>
         <div class="box">
-  <h2>我的操作紀錄</h2>
-
-  <?php if (!$logs): ?>
-    <p>尚無紀錄。</p>
-  <?php else: ?>
-    <table border="1" cellpadding="8" style="width:100%; border-collapse: collapse;">
-      <tr>
-        <th>時間</th>
-        <th>事件</th>
-        <th>結果</th>
-        <th>IP</th>
-        <th>備註</th>
-      </tr>
-
-      <?php foreach ($logs as $log): ?>
-        <tr>
-          <td><?php echo h($log['created_at']); ?></td>
-          <td><?php echo h($log['event']); ?></td>
-          <td>
-            <?php echo $log['success'] ? '成功' : '失敗'; ?>
-          </td>
-          <td><?php echo h($log['ip_address']); ?></td>
-          <td><?php echo h($log['notes']); ?></td>
-        </tr>
-      <?php endforeach; ?>
-    </table>
-  <?php endif; ?>
-</div>
-      <?php else: ?>
-        <div class="box">
-          <h2>歡迎訪問攝影作品分享平台</h2>
-          <p>請先註冊或登入後再上傳作品。</p>
-          <a class="btn" href="index.php?page=register">註冊</a>
-          <a class="btn secondary" href="index.php?page=login">登入</a>
+        <h2>歡迎訪問攝影作品分享平台</h2>
+        <p>請先註冊或登入後再上傳作品。</p>
+        <a class="btn" href="index.php?page=register">註冊</a>
+        <a class="btn secondary" href="index.php?page=login">登入</a>
         </div>
     <?php endif; ?>
 
@@ -517,6 +483,36 @@ if ($page === 'edit' && $user) {
         <?php endif; ?>
     </div>
     <?php endif; ?>
+    <div class="box">
+    <h2>我的操作紀錄</h2>
+    <?php if (!$logs): ?>
+        <p>尚無紀錄。</p>
+        <?php else: ?>
+        <table border="1" cellpadding="8" style="width:100%; border-collapse: collapse;">
+            <tr>
+                <th>時間</th>
+                <th>事件</th>
+                <th>結果</th>
+                <th>IP 位址</th>
+                <th>備註</th>
+            </tr>
+    <?php foreach ($logs as $log): ?>
+            <tr>
+            <td><?php echo h($log['occurred_at']); ?></td>
+            <?php
+            $eventMap = ['login' => '登入','logout' => '登出','register' => '註冊'];
+            ?>
+            <td><?php echo h($eventMap[$log['event']] ?? $log['event']); ?></td>
+            <td>
+            <?php echo $log['success'] ? '成功' : '失敗'; ?>
+            </td>
+            <td><?php echo h($log['ip_address']); ?></td>
+            <td><?php echo h($log['notes']); ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </table>
+    <?php endif; ?>
+    </div>
 </div>
 </body>
 </html>
