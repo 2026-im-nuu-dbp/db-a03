@@ -254,7 +254,6 @@ if ($user) {
         WHERE user_id = ? 
         ORDER BY created_at DESC
     ");
-
     if ($stmt) {
         $stmt->bind_param('i', $user['id']);
         $stmt->execute();
