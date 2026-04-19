@@ -232,6 +232,7 @@ if ($page === 'delete' && $user) {
 $user = getCurrentUser();
 $myMemos = [];
 $publicMemos = [];
+$logs = [];
 if ($user) {
     $stmt = $conn->prepare('SELECT id, title, category, content, inspiration, thumbnail_path, created_at FROM dbmemo WHERE user_id = ? ORDER BY created_at DESC');
 if ($stmt) {
@@ -244,6 +245,26 @@ if ($stmt) {
     $stmt->close();
 } else {
     $error = '載入個人作品失敗：' . $conn->error;
+    }
+}
+if ($user) {
+    $stmt = $conn->prepare("
+        SELECT event, success, ip_address, notes, created_at 
+        FROM dblog 
+        WHERE user_id = ? 
+        ORDER BY created_at DESC
+    ");
+
+    if ($stmt) {
+        $stmt->bind_param('i', $user['id']);
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        while ($row = $res->fetch_assoc()) {
+            $logs[] = $row;
+        }
+
+        $stmt->close();
     }
 }
 $stmt = $conn->prepare('SELECT m.id, m.title, m.category, m.content, m.inspiration, m.thumbnail_path, m.created_at, u.nickname FROM dbmemo m JOIN dbusers u ON u.id = m.user_id WHERE m.is_public = 1 ORDER BY m.created_at DESC');
@@ -438,6 +459,35 @@ if ($page === 'edit' && $user) {
             </div>
           <?php endif; ?>
         </div>
+        <div class="box">
+  <h2>我的操作紀錄</h2>
+
+  <?php if (!$logs): ?>
+    <p>尚無紀錄。</p>
+  <?php else: ?>
+    <table border="1" cellpadding="8" style="width:100%; border-collapse: collapse;">
+      <tr>
+        <th>時間</th>
+        <th>事件</th>
+        <th>結果</th>
+        <th>IP</th>
+        <th>備註</th>
+      </tr>
+
+      <?php foreach ($logs as $log): ?>
+        <tr>
+          <td><?php echo h($log['created_at']); ?></td>
+          <td><?php echo h($log['event']); ?></td>
+          <td>
+            <?php echo $log['success'] ? '成功' : '失敗'; ?>
+          </td>
+          <td><?php echo h($log['ip_address']); ?></td>
+          <td><?php echo h($log['notes']); ?></td>
+        </tr>
+      <?php endforeach; ?>
+    </table>
+  <?php endif; ?>
+</div>
       <?php else: ?>
         <div class="box">
           <h2>歡迎訪問攝影作品分享平台</h2>

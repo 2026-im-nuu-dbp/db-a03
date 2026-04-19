@@ -2,7 +2,6 @@
 /**
  * 共用函式、巨集、重導向工具
  */
-
 /**
  * 取得全域資料庫連線
  */
@@ -13,14 +12,12 @@ function getDb() {
     }
     return $conn;
 }
-
 /**
  * 檢查使用者是否已登入
  */
 function isLoggedIn() {
     return isset($_SESSION['user_id']) && $_SESSION['user_id'] > 0;
 }
-
 /**
  * 取得目前登入的使用者
  */
@@ -36,14 +33,12 @@ function getCurrentUser() {
         'interests' => $_SESSION['interests']
     ];
 }
-
 /**
  * 防止 XSS：將文字進行 HTML 編碼
  */
 function h($text) {
     return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
 }
-
 /**
  * 重導向至指定頁面
  */
@@ -51,7 +46,6 @@ function redirect($url) {
     header('Location: ' . $url);
     exit;
 }
-
 /**
  * 紀錄操作事件
  */
