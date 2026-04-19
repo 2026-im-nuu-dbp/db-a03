@@ -1,3 +1,4 @@
+[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/VOLNfwbe)
 # 作業 5 資料庫基礎存取
 
 ## 繳交說明
@@ -28,3 +29,9 @@
 7. 登入資料可以被瀏覽
 
 ## 自行設計的內容說明(同學自填)
+主題:攝影作品分享
+1.可以上傳圖片檔,並說明圖片內容以及靈感來源
+2.上傳的作品可供大家欣賞
+3.上傳的作品要分類(風景、人物、動物、植物、其他)
+4.首頁設計:註冊、登入、登出、上傳作品、自己的作品欄、作品交流區
+
